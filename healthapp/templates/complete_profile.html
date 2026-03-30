@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Complete Profile</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+<body>
+    <div class="relative flex size-full min-h-screen flex-col bg-white group/design-root overflow-x-hidden" style='font-family: "Public Sans", "Noto Sans", sans-serif;'>
+        <div class="layout-container flex h-full grow flex-col">
+            <div class="px-40 flex flex-1 justify-center py-5">
+                <div class="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
+                    <h2 class="text-[#121616] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">Complétez votre profil</h2>
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="text-red-500 text-center pb-3">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    <form method="post" class="px-4">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label class="block text-[#121616] text-sm font-bold mb-2" for="email">
+                                Email
+                            </label>
+                            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                id="email" name="email" type="email" placeholder="Email" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-[#121616] text-sm font-bold mb-2" for="password">
+                                Mot de passe
+                            </label>
+                            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                id="password" name="password" type="password" placeholder="Mot de passe" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-[#121616] text-sm font-bold mb-2" for="address">
+                                Adresse
+                            </label>
+                            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                id="address" name="address" type="text" placeholder="Adresse" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-[#121616] text-sm font-bold mb-2" for="phone_number">
+                                Numéro de téléphone
+                            </label>
+                            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                id="phone_number" name="phone_number" type="text" placeholder="Numéro de téléphone" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-[#121616] text-sm font-bold mb-2" for="specialite">
+                                Spécialité
+                            </label>
+                            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                id="specialite" name="specialite" type="text" placeholder="Spécialité" required>
+                        </div>
+
+                           <div class="mb-4">
+                            <label class="block text-[#121616] text-sm font-bold mb-2" for="specialite">
+                                nom
+                            </label>
+                            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                id="nom" name="nom" type="text" placeholder="Nom" required>
+                        </div>
+
+                           <div class="mb-4">
+                            <label class="block text-[#121616] text-sm font-bold mb-2" for="specialite">
+                                prenom
+                            </label>
+                            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                id="prenom" name="prenom" type="text" placeholder="Prénom" required>
+                        </div>
+                        <div class="flex items-center justify-center">
+                            <button class="bg-[#2a7e74] hover:bg-[#1f5e56] text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                                type="submit">
+                                Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

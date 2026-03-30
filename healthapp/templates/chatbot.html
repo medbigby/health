@@ -1,0 +1,720 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&family=Public+Sans%3Awght%40400%3B500%3B700%3B900"
+    />
+
+    <title></title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <style>
+      /* Styles pour l'impression A5 */
+      @media print {
+        @page {
+          margin: 0;
+          @top-center { content: none; }
+          @bottom-center { content: none; }
+        }
+        /* Masque les éléments spécifiques qui ne doivent jamais être imprimés */
+        header,
+        .flex-1.justify-end.gap-4.sm\:gap-8, /* Barre de recherche dans l'en-tête */
+        #customMessageBox, /* Cache la boîte de message personnalisée */
+        #printPrescriptionBtn, /* Cache le bouton d'impression lui-même */
+        #printForm, /* Cache le formulaire d'impression */
+        .print-hide-section /* Cache les sections d'information avec leurs inputs/boutons */
+        {
+            display: none !important;
+        }
+
+        /* Rend visible uniquement la zone de contenu principale à imprimer */
+        .layout-content-container.print-area {
+          visibility: visible !important;
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 148mm !important; /* Largeur A5 */
+          height: auto !important; /* La hauteur s'ajuste au contenu */
+          margin: 0 !important; /* Pas de marge pour l'impression */
+          padding: 10mm !important; /* Marges internes */
+          box-shadow: none !important; /* Supprime les ombres */
+          background-color: white !important; /* Fond blanc pour l'impression */
+          color: black !important; /* Texte noir */
+          font-size: 10pt !important; /* Taille de police pour A5 */
+        }
+
+        /* S'assure que tous les enfants de la zone d'impression sont visibles et stylisés pour l'impression */
+        .layout-content-container.print-area * {
+            visibility: visible !important;
+            color: black !important; /* Assure que le texte est noir */
+            background-color: transparent !important; /* Pas de couleurs de fond */
+            box-shadow: none !important; /* Pas d'ombres */
+            border-color: #ccc !important; /* Bordures claires pour les tableaux */
+        }
+        .layout-content-container.print-area table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+        }
+        .layout-content-container.print-area th, .layout-content-container.print-area td {
+            border: 1px solid #ccc !important;
+            padding: 8px !important;
+            text-align: left !important;
+        }
+        /* Masque la colonne "Action" */
+        .layout-content-container.print-area th.print-hide,
+        .layout-content-container.print-area td.print-hide {
+            display: none !important;
+        }
+
+        /* S'assure que les éléments spécifiques qui devraient être visibles ne sont pas cachés par les règles générales */
+        .layout-content-container.print-area h2,
+        .layout-content-container.print-area p,
+        .layout-content-container.print-area label,
+        .layout-content-container.print-area span {
+            display: block !important;
+        }
+        .layout-content-container.print-area .flex.flex-wrap.lg\:flex-nowrap.justify-between.gap-4.p-4,
+        .layout-content-container.print-area .flex.flex-col.gap-2.w-full.lg\:w-1\/2,
+        .layout-content-container.print-area .flex.flex-col.gap-3.w-full.mt-8,
+        .layout-content-container.print-area .flex.flex-wrap.gap-4 {
+            display: flex !important; /* Restaure le flex pour ces divs de mise en page */
+        }
+
+        /* Ajoute de l'espace entre les informations du patient et du médecin */
+        .layout-content-container.print-area .doctor-info-print {
+            margin-top: 20px !important; /* Ajustez selon l'espacement désiré */
+        }
+      }
+    </style>
+  </head>
+  <body style="padding-top: 80px;">
+    {% csrf_token %}
+    <!-- Message Box pour les alertes personnalisées -->
+    <div id="customMessageBox" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+      <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+        <p id="messageBoxText" class="text-lg font-semibold text-[#0e161b] mb-4"></p>
+        <button id="messageBoxCloseBtn" class="bg-[#2a7d74] text-white py-2 px-4 rounded-lg hover:bg-[#226a62] transition-colors">OK</button>
+      </div>
+    </div>
+
+    <!-- Modal pour ajouter un nouveau médicament -->
+    <div id="addMedicamentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+      <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+        <h3 class="text-lg font-semibold text-[#0e161b] mb-4">Ajouter un nouveau médicament</h3>
+        <form id="addMedicamentForm">
+          <div class="mb-4">
+            <label class="block text-[#0e161b] text-sm font-medium mb-1">Nom de marque</label>
+            <input type="text" id="newNomDeMarque" class="form-input rounded-lg border border-[#d0dee7] bg-white px-3 py-2 text-[#0e161b] focus:ring-0 focus:border-[#4e7a97] w-full" required>
+          </div>
+          <div class="mb-4">
+            <label class="block text-[#0e161b] text-sm font-medium mb-1">Dénomination</label>
+            <input type="text" id="newDenomination" class="form-input rounded-lg border border-[#d0dee7] bg-white px-3 py-2 text-[#0e161b] focus:ring-0 focus:border-[#4e7a97] w-full" required>
+          </div>
+          <div class="mb-4">
+            <label class="block text-[#0e161b] text-sm font-medium mb-1">Dosage</label>
+            <input type="text" id="newDosage" class="form-input rounded-lg border border-[#d0dee7] bg-white px-3 py-2 text-[#0e161b] focus:ring-0 focus:border-[#4e7a97] w-full" required>
+          </div>
+          <div class="mb-4">
+            <label class="block text-[#0e161b] text-sm font-medium mb-1">Forme</label>
+            <input type="text" id="newForme" class="form-input rounded-lg border border-[#d0dee7] bg-white px-3 py-2 text-[#0e161b] focus:ring-0 focus:border-[#4e7a97] w-full" required>
+          </div>
+          <div class="mb-4">
+            <label class="block text-[#0e161b] text-sm font-medium mb-1">Conditionnement</label>
+            <input type="text" id="newCond" class="form-input rounded-lg border border-[#d0dee7] bg-white px-3 py-2 text-[#0e161b] focus:ring-0 focus:border-[#4e7a97] w-full">
+          </div>
+          <div class="flex justify-end gap-4">
+            <button type="button" id="cancelAddMedicament" class="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">Annuler</button>
+            <button type="submit" class="bg-[#2a7d74] text-white py-2 px-4 rounded-lg hover:bg-[#226a62] transition-colors">Ajouter</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
+      class="relative flex size-full min-h-screen flex-col bg-slate-50 group/design-root overflow-x-hidden"
+      style='font-family: "Public Sans", "Noto Sans", sans-serif;'
+    >
+      <div class="layout-container flex h-full grow flex-col">
+        <header
+          class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7eef3] px-4 py-3 sm:px-10"
+          style="position: fixed; top: 0; left: 0; right: 0; z-index: 10;"
+        >
+          <div class="flex items-center gap-4 sm:gap-8">
+            <div class="flex items-center gap-2 sm:gap-4 text-[#0e161b]">
+              <div class="size-4">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z"
+                    fill="currentColor"
+                  ></path>
+                </svg>
+              </div>
+              <h2 class="text-[#0e161b] text-lg font-bold leading-tight tracking-[-0.015em]">
+                HealthHub
+              </h2>
+            </div>
+            <div class="hidden sm:flex items-center gap-4 sm:gap-9">
+
+              <a class="text-[#0e161b] text-sm font-medium leading-normal" href="{% url 'list_prescriptions' %}">Ordonnances</a>
+              <a class="text-[#0e161b] text-sm font-medium leading-normal" href="{% url 'doctor_appointments' %}">Rendez-vous</a>
+
+              <form method="post" action="{% url 'logout' %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="text-[#0e161b] text-sm font-medium leading-normal hover:text-[#4e7a97]">Logout</button>
+              </form>
+
+            </div>
+          </div>
+          
+        </header>
+        <div class="px-4 sm:px-40 flex flex-1 justify-center py-5" style="overflow-y: auto;">
+          <!-- Conteneur principal qui ne sera PAS masqué par défaut à l'impression -->
+          <div class="flex flex-col max-w-[960px] flex-1">
+
+            <div class="flex flex-wrap lg:flex-nowrap justify-between gap-4 p-4">
+
+              <!-- Section Informations du Patient (masquée à l'impression) -->
+              <div class="flex flex-col gap-2 w-full lg:w-1/3 print-hide-section">
+                <h2 class="text-[#0e161b] text-[22px] font-bold leading-tight tracking-[-0.015em]">
+                  Informations du Patient
+                </h2>
+                <label class="text-[#0e161b] text-lg font-bold">Nom du Patient :</label>
+                <input
+                  type="text"
+                  id="patientNameInput"
+                  class="form-input rounded-lg border border-[#d0dee7] bg-white px-3 py-2 text-[#0e161b] focus:ring-0 focus:border-[#4e7a97]"
+                  placeholder="Entrez le nom du patient"
+                />
+                <label class="text-[#0e161b] text-lg font-bold">Âge du Patient :</label>
+                <input
+                  type="number"
+                  id="patientAgeInput"
+                  class="form-input rounded-lg border border-[#d0dee7] bg-white px-3 py-2 text-[#0e161b] focus:ring-0 focus:border-[#4e7a97]"
+                  placeholder="Entrez l'âge du patient"
+                />
+              </div>
+
+
+              <!-- Section Ajouter un Médicament (masquée à l'impression) -->
+              <div class="flex flex-col gap-2 w-full lg:w-1/3 print-hide-section">
+                <label class="flex flex-col min-w-40 h-12 w-full relative">
+                  <div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+                    <div
+                      class="text-[#4e7a97] flex border-none bg-[#e7eef3] items-center justify-center pl-4 rounded-l-lg border-r-0"
+                      data-icon="MagnifyingGlass"
+                      data-size="24px"
+                      data-weight="regular"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24px"
+                        height="24px"
+                        fill="currentColor"
+                        viewBox="0 0 256 256"
+                      >
+                        <path
+                          d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <input
+                      id="medicineSearchInput"
+                      placeholder="Rechercher des médicaments (ex: PREDNISOLONE)"
+                      class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0e161b] focus:outline-0 focus:ring-0 border-none bg-[#e7eef3] focus:border-none h-full placeholder:text-[#4e7a97] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal"
+                      value=""
+                      required
+                    />
+                  </div>
+                  <div
+                    id="searchResults"
+                    class="absolute z-10 w-full bg-white border border-[#d0dee7] rounded-lg mt-1 top-full shadow-lg max-h-60 overflow-y-auto hidden"
+                  ></div>
+                </label>
+
+                <!-- Les champs cachés pour stocker le code, dosage et forme du médicament sélectionné -->
+                <input type="hidden" id="selectedMedicineCode" />
+                <input type="hidden" id="selectedMedicineDosage" />
+                <input type="hidden" id="selectedMedicineForme" />
+
+                <!-- Frequency and Unit Inputs -->
+                <div class="flex gap-4 mt-2">
+                  <div class="flex-1">
+                    <label class="text-[#0e161b] text-lg font-bold">Fréquence:</label>
+                    <input
+                      type="number"
+                      id="medicineFrequencyInput"
+                      class="form-input rounded-lg border border-[#d0dee7] bg-white px-3 py-2 text-[#0e161b] focus:ring-0 focus:border-[#4e7a97] w-full"
+                      placeholder="Nombre de fois par jour"
+                      min="1"
+                      required
+                    />
+                  </div>
+                  <div class="flex-1">
+                    <label class="text-[#0e161b] text-lg font-bold">Unité:</label>
+                    <select
+                      id="medicineUnitInput"
+                      class="form-select rounded-lg border border-[#d0dee7] bg-white px-3 py-2 text-[#0e161b] focus:ring-0 focus:border-[#4e7a97] w-full"
+                      required
+                    >
+                      <option value="gouttes">Gouttes</option>
+                      <option value="cuilleres">Cuillères</option>
+                      <option value="comprimes">Comprimés</option>
+                      <option value="autre">Autre</option>
+                    </select>
+                  </div>
+                </div>
+                <button
+                  id="addMedicineBtn"
+                  class="bg-[#2a7d74] text-white py-2 px-4 rounded-lg mt-2 hover:bg-[#226a62] transition-colors"
+                >
+                  Ajouter le médicament sélectionné à la prescription
+                </button>
+              </div>
+            </div>
+
+            <!-- Cette div est maintenant le print-area et contient TOUT ce qui doit être imprimé -->
+            <div class="layout-content-container flex flex-col max-w-[960px] flex-1 print-area">
+                <div class="flex flex-col gap-3 w-full p-4">
+                  <p class="text-[#0e161b] tracking-light text-[32px] font-bold leading-tight print-hide">
+                    Prescription
+                  </p>
+                  <div class="flex flex-wrap gap-4 justify-between">
+                      <div class="flex flex-col">
+                          <p class="text-[#0e161b] text-lg font-normal leading-normal" style="white-space: nowrap;">
+                              Patient: <span id="displayPatientName">Patient Inconnu</span>, Âge: <span id="displayPatientAge">N/A</span> ans
+                          </p>
+                      </div>
+                      <div class="flex flex-col doctor-info-print">
+                          <p class="text-[#0e161b] text-lg font-normal leading-normal">
+                              Médecin: <span id="displayDoctorName">Dr. {{ doctor.prenom }} {{ doctor.nom }}</span>
+                          </p>
+                          <p class="text-[#4e7a97] text-sm font-normal leading-normal">
+                              Téléphone: <span id="displayDoctorPhone">{{ doctor.phone_number }}</span>
+                          </p>
+                          <p class="text-[#4e7a97] text-sm font-normal leading-normal">
+                              Adresse: <span id="displayDoctorAddress">{{ doctor.address }}</span>
+                          </p>
+                          <span id="displayDoctorSpecialite" style="display:none;">{{ doctor.specialite }}</span>
+                      </div>
+                  </div>
+                </div>
+
+                <h2
+                  class="text-[#0e161b] text-[22px] font-bold leading-tight tracking-[-0.015em] mt-8 p-4"
+                >
+                  Médicaments Prescrits
+                </h2>
+                <div class="@container p-4">
+                  <div class="flex overflow-hidden rounded-lg border border-[#d0dee7] bg-slate-50">
+                    <table class="flex-1 w-full">
+                      <thead>
+                        <tr class="bg-slate-50">
+                          <th
+                            class="px-4 py-3 text-left text-[#0e161b] text-sm font-medium leading-normal"
+                          >
+                            Médicament
+                          </th>
+                          <th
+                            class="px-4 py-3 text-left text-[#0e161b] text-sm font-medium leading-normal"
+                          >
+                            Dosage
+                          </th>
+                          <th
+                            class="px-4 py-3 text-left text-[#0e161b] text-sm font-medium leading-normal"
+                          >
+                            Fréquence
+                          </th>
+                          <th
+                            class="px-4 py-3 text-left text-[#0e161b] text-sm font-medium leading-normal print-hide"
+                          >
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody id="prescriptionTableBody">
+                        <!-- Les médicaments ajoutés dynamiquement iront ici -->
+                      </tbody>
+                    </table>
+                  </div>
+                  <style>
+                    /* Responsive table columns (Tailwind's container queries) */
+                    @container (max-width: 120px) {
+                      .table-7d74a3f3-50d1-4fcf-be86-44220da17342-column-120 {
+                        display: none;
+                      }
+                    }
+                    @container (max-width: 240px) {
+                      .table-7d74a3f3-50d1-4fcf-be86-44220da17342-column-240 {
+                        display: none;
+                      }
+                    }
+                    @container (max-width: 360px) {
+                      .table-7d74a3f3-50d1-4fcf-be86-44220da17342-column-360 {
+                        display: none;
+                      }
+                    }
+                    @container (max-width: 480px) {
+                      .table-7d74a3f3-50d1-4fcf-be86-44220da17342-column-480 {
+                        display: none;
+                      }
+                    }
+                  </style>
+                </div>
+
+                <form id="printForm" method="POST" action="{% url 'save_prescription' %}">
+                    {% csrf_token %}
+                    <input type="hidden" id="patientNamePrint" name="patient_nom">
+                    <input type="hidden" id="patientAgePrint" name="patient_age">
+                    <input type="hidden" id="doctorNamePrint" name="docteur_nom">
+                    <input type="hidden" id="doctorSpecialitePrint" name="docteur_specialite">
+                    <input type="hidden" id="doctorAddressPrint" name="docteur_adresse">
+                    <input type="hidden" id="htmlContentPrint" name="html_content">
+                    <button type="submit"
+                        class="bg-[#2a7d74] text-white py-2 px-4 rounded-lg mt-4 hover:bg-[#226a62] transition-colors self-start ml-4 print-hide">
+                        Imprimer la Prescription (A5)
+                    </button>
+                </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Fonction utilitaire pour afficher les messages personnalisés
+        function showMessageBox(message) {
+          const messageBox = document.getElementById("customMessageBox");
+          const messageBoxText = document.getElementById("messageBoxText");
+          const messageBoxCloseBtn = document.getElementById("messageBoxCloseBtn");
+
+          messageBoxText.textContent = message;
+          messageBox.classList.remove("hidden");
+
+          messageBoxCloseBtn.onclick = () => {
+            messageBox.classList.add("hidden");
+          };
+        }
+
+        // Éléments d'information du patient (maintenus pour l'affichage de la prescription)
+        const patientNameInput = document.getElementById("patientNameInput");
+        const patientAgeInput = document.getElementById("patientAgeInput");
+        const displayPatientName = document.getElementById("displayPatientName");
+        const displayPatientAge = document.getElementById("displayPatientAge");
+
+        // Éléments d'information du médecin (maintenus pour l'affichage de la prescription)
+        const displayDoctorName = document.getElementById("displayDoctorName");
+        const displayDoctorPhone = document.getElementById("displayDoctorPhone");
+        const displayDoctorAddress = document.getElementById("displayDoctorAddress");
+        const displayDoctorSpecialite = document.getElementById("displayDoctorSpecialite");
+
+        // Éléments de recherche et d'ajout de médicament
+        const medicineSearchInput = document.getElementById("medicineSearchInput");
+        const searchResultsDiv = document.getElementById("searchResults");
+        const selectedMedicineCode = document.getElementById("selectedMedicineCode");
+        const selectedMedicineDosage = document.getElementById("selectedMedicineDosage");
+        // const medicineFrequencyInput = document.getElementById("medicineFrequencyInput"); // Supprimé
+
+        const addMedicineBtn = document.getElementById("addMedicineBtn");
+        const prescriptionTableBody = document.getElementById("prescriptionTableBody");
+        const printPrescriptionBtn = document.getElementById("printPrescriptionBtn"); // Nouveau bouton d'impression
+
+        // Fonctionnalité de définition des informations du patient
+        function updatePatientInfo() {
+          const name = patientNameInput.value.trim();
+          const age = patientAgeInput.value.trim();
+
+          if (name) {
+            displayPatientName.textContent = name;
+          } else {
+            displayPatientName.textContent = "Patient Inconnu";
+          }
+          if (age) {
+            displayPatientAge.textContent = age;
+          } else {
+            displayPatientAge.textContent = "N/A";
+          }
+        }
+
+        patientNameInput.addEventListener("input", updatePatientInfo);
+        patientAgeInput.addEventListener("input", updatePatientInfo);
+
+
+        // Fonctionnalité de recherche de médicament (AJAX)
+        let searchTimeout;
+        medicineSearchInput.addEventListener("keyup", function () {
+          clearTimeout(searchTimeout);
+          const query = this.value.trim();
+
+          if (query.length > 1) {
+            searchTimeout = setTimeout(() => {
+              fetch(`/search-medicament/?q=${encodeURIComponent(query)}`, {
+                headers: {
+                  "X-Requested-With": "XMLHttpRequest",
+                },
+              })
+                .then((response) => response.json())
+                .then((data) => {
+                  searchResultsDiv.innerHTML = "";
+                  if (data.medicaments && data.medicaments.length > 0) {
+                    searchResultsDiv.style.display = "block";
+                    data.medicaments.forEach((med) => {
+                      const resultItem = document.createElement("div");
+                      resultItem.classList.add(
+                        "p-2",
+                        "cursor-pointer",
+                        "hover:bg-gray-200",
+                        "border-b",
+                        "border-gray-100"
+                      );
+                      resultItem.textContent = `${med.nom_de_marque} (${med.denomination}) - ${med.dosage}`;
+                      resultItem.dataset.medicine = JSON.stringify(med);
+                      searchResultsDiv.appendChild(resultItem);
+                    });
+                  } else {
+                    searchResultsDiv.style.display = "block";
+                    const addNewItem = document.createElement("div");
+                    addNewItem.classList.add("p-2", "cursor-pointer", "hover:bg-gray-200", "border-b", "border-gray-100", "text-blue-600", "font-semibold");
+                    addNewItem.textContent = "Ajouter un nouveau médicament";
+                    addNewItem.id = "addNewMedicamentBtn";
+                    searchResultsDiv.appendChild(addNewItem);
+                  }
+                })
+                .catch((error) => {
+                  console.error("Erreur lors de la récupération des résultats de recherche :", error);
+                  searchResultsDiv.innerHTML = "";
+                  searchResultsDiv.style.display = "none";
+                });
+            }, 300);
+          } else {
+            searchResultsDiv.innerHTML = "";
+            searchResultsDiv.style.display = "none";
+          }
+        });
+
+        // Gérer la sélection à partir des résultats de recherche
+        searchResultsDiv.addEventListener("click", function (event) {
+          const clickedItem = event.target.closest("div");
+          if (clickedItem && clickedItem.dataset.medicine) {
+            const med = JSON.parse(clickedItem.dataset.medicine);
+            selectedMedicineCode.value = med.code;
+            selectedMedicineDosage.value = med.dosage;
+            selectedMedicineForme.value = med.forme;
+
+            medicineSearchInput.value = `${med.nom_de_marque} (${med.denomination}) - ${med.dosage}`;
+            searchResultsDiv.innerHTML = "";
+            searchResultsDiv.style.display = "none";
+          } else if (clickedItem && clickedItem.id === "addNewMedicamentBtn") {
+            // Ouvrir le modal pour ajouter un nouveau médicament
+            document.getElementById("addMedicamentModal").classList.remove("hidden");
+            // Pré-remplir avec la requête de recherche
+            const query = medicineSearchInput.value.trim();
+            document.getElementById("newNomDeMarque").value = query;
+            searchResultsDiv.innerHTML = "";
+            searchResultsDiv.style.display = "none";
+          }
+        });
+
+        // Fonctionnalité d'ajout de médicament à la prescription
+        addMedicineBtn.addEventListener("click", function () {
+          const medicineName = medicineSearchInput.value.trim();
+          const actualMedicineCode = selectedMedicineCode.value;
+          const dosage = selectedMedicineDosage.value;
+          const frequencyInput = document.getElementById("medicineFrequencyInput");
+          const unitInput = document.getElementById("medicineUnitInput");
+
+          // Vérification si le médicament est sélectionné
+          if (!actualMedicineCode || !medicineName) {
+            showMessageBox("Veuillez rechercher et sélectionner un médicament parmi les suggestions.");
+            return; // Arrête l'exécution si le médicament n'est pas sélectionné
+          }
+
+          // Vérification si la fréquence et l'unité sont saisies
+          if (!frequencyInput.value || !unitInput.value) {
+            showMessageBox("Veuillez saisir la fréquence et l'unité.");
+            return;
+          }
+
+          const frequency = `${frequencyInput.value}x/jour en ${unitInput.value}`;
+
+          const newRow = document.createElement("tr");
+          newRow.className = "border-t border-t-[#d0dee7]";
+          // Utilisation d'un ID unique pour la ligne pour faciliter la suppression
+          newRow.dataset.medicineId = Date.now(); // Un ID simple basé sur le timestamp
+          newRow.dataset.medicineCode = actualMedicineCode; // Store the DB code
+          newRow.dataset.medicineForme = selectedMedicineForme.value; // Store the forme
+
+          newRow.innerHTML = `
+            <td class="h-[72px] px-4 py-2 text-[#0e161b] text-sm font-normal leading-normal">
+                ${medicineName}
+            </td>
+            <td class="h-[72px] px-4 py-2 text-[#4e7a97] text-sm font-normal leading-normal">
+                ${dosage || "N/A"}
+            </td>
+            <td class="h-[72px] px-4 py-2 text-[#4e7a97] text-sm font-normal leading-normal">
+                ${frequency}
+            </td>
+            <td class="h-[72px] px-4 py-2 text-[#4e7a97] text-sm font-normal leading-normal print-hide">
+                <button class="delete-medicine-btn bg-red-500 text-white py-1 px-2 rounded-lg hover:bg-red-600 transition-colors">Supprimer</button>
+            </td>
+          `;
+
+          prescriptionTableBody.appendChild(newRow);
+
+          // Effacer les champs d'entrée après ajout
+          medicineSearchInput.value = "";
+          selectedMedicineCode.value = "";
+          selectedMedicineDosage.value = "";
+          document.getElementById("medicineFrequencyInput").value = "";
+        });
+
+        // Fonctionnalité de suppression de médicament (délégation d'événements)
+        prescriptionTableBody.addEventListener("click", function(event) {
+            if (event.target.classList.contains("delete-medicine-btn")) {
+                const rowToDelete = event.target.closest("tr");
+                if (rowToDelete) {
+                    rowToDelete.remove();
+                }
+            }
+        });
+
+        // Gestion du modal d'ajout de médicament
+        document.getElementById("cancelAddMedicament").addEventListener("click", function() {
+          document.getElementById("addMedicamentModal").classList.add("hidden");
+          document.getElementById("addMedicamentForm").reset();
+        });
+
+        document.getElementById("addMedicamentForm").addEventListener("submit", function(e) {
+          e.preventDefault();
+          // Collect data
+          const data = {
+            nom_de_marque: document.getElementById("newNomDeMarque").value.trim(),
+            denomination: document.getElementById("newDenomination").value.trim(),
+            dosage: document.getElementById("newDosage").value.trim(),
+            forme: document.getElementById("newForme").value.trim(),
+            cond: document.getElementById("newCond").value.trim(),
+          };
+          // POST to add-medicament
+          fetch("/add-medicament/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify(data),
+          })
+          .then(response => response.json())
+          .then(result => {
+            if (result.success) {
+              showMessageBox("Médicament ajouté avec succès.");
+              // Close modal
+              document.getElementById("addMedicamentModal").classList.add("hidden");
+              document.getElementById("addMedicamentForm").reset();
+              // Select the new one
+              medicineSearchInput.value = `${result.medicament.nom_de_marque} (${result.medicament.denomination}) - ${result.medicament.dosage}`;
+              selectedMedicineCode.value = result.medicament.code;
+              selectedMedicineDosage.value = result.medicament.dosage;
+              selectedMedicineForme.value = result.medicament.forme;
+            } else {
+              showMessageBox("Erreur lors de l'ajout du médicament: " + result.error);
+            }
+          })
+          .catch(error => {
+            console.error("Erreur:", error);
+            showMessageBox("Erreur lors de l'ajout du médicament.");
+          });
+        });
+
+        // Set up form submission handler
+        document.getElementById('printForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            
+            // Collect all prescription data including medications
+            const prescriptionData = {
+                patient_nom: document.getElementById("displayPatientName").textContent,
+                patient_age: document.getElementById("displayPatientAge").textContent,
+                docteur_nom: document.getElementById("displayDoctorName").textContent,
+                docteur_specialite: document.getElementById("displayDoctorSpecialite").textContent,
+                docteur_adresse: document.getElementById("displayDoctorAddress").textContent,
+                medicaments: [],
+                html_content: document.querySelector('.print-area').outerHTML
+            };
+
+            // Collect medications
+            const rows = prescriptionTableBody.querySelectorAll("tr");
+            rows.forEach(row => {
+                const cells = row.querySelectorAll("td");
+                if (cells.length >= 3) {
+                    prescriptionData.medicaments.push({
+                        id: row.dataset.medicineCode,
+                        quantite: 1, // Default quantity
+                        forme: row.dataset.medicineForme,
+                        instructions: '',
+                        frequence: document.getElementById("medicineFrequencyInput").value || '1',
+                        unite_frequence: document.getElementById("medicineUnitInput").value || 'comprimés'
+                    });
+                }
+            });
+
+            // Set form values including medications as JSON
+            document.getElementById('patientNamePrint').value = prescriptionData.patient_nom;
+            document.getElementById('patientAgePrint').value = prescriptionData.patient_age;
+            document.getElementById('doctorNamePrint').value = prescriptionData.docteur_nom;
+            document.getElementById('doctorSpecialitePrint').value = prescriptionData.docteur_specialite;
+            document.getElementById('doctorAddressPrint').value = prescriptionData.docteur_adresse;
+            
+            // Add medications and HTML content as hidden fields
+            const medsInput = document.createElement('input');
+            medsInput.type = 'hidden';
+            medsInput.name = 'medicaments';
+            medsInput.value = JSON.stringify(prescriptionData.medicaments);
+            form.appendChild(medsInput);
+
+            document.getElementById('htmlContentPrint').value = prescriptionData.html_content;
+            console.log("Contenu HTML envoyé:", prescriptionData.html_content);
+
+            
+            
+            try {
+                console.log("DEBUG: Sending prescription data to server");
+                const formData = new FormData(form);
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                console.log("DEBUG: Received response with status:", response.status);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    // Trigger print dialog after successful save
+                    document.body.classList.add("print-mode");
+                    window.print();
+                    document.body.classList.remove("print-mode");
+                } else {
+                    const error = await response.json();
+                    showMessageBox(`Erreur: ${error.error || 'Échec de la génération de la prescription'}`);
+                }
+            } catch (error) {
+                showMessageBox(`Erreur: ${error.message || 'Une erreur est survenue'}`);
+            } finally {
+                // Restore button state
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Imprimer la Prescription (A5)";
+            }
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste des Prescriptions</title>
+    {% load static %}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="{% static 'images/health.png' %}" type="image/png">
+</head>
+<body class="bg-gray-50" style="padding-top: 80px;">
+    {% csrf_token %}
+    <!-- Message Box pour les alertes personnalisées -->
+    <div id="customMessageBox" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+            <p id="messageBoxText" class="text-lg font-semibold text-[#0e161b] mb-4"></p>
+            <button id="messageBoxCloseBtn" class="bg-[#2a7d74] text-white py-2 px-4 rounded-lg hover:bg-[#226a62] transition-colors">OK</button>
+        </div>
+    </div>
+
+    <div class="relative flex size-full min-h-screen flex-col bg-slate-50 group/design-root overflow-x-hidden" style='font-family: "Public Sans", "Noto Sans", sans-serif;'>
+        <div class="layout-container flex h-full grow flex-col">
+            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7eef3] px-4 py-3 sm:px-10">
+                <div class="flex items-center gap-4 sm:gap-8">
+                    <div class="flex items-center gap-2 sm:gap-4 text-[#0e161b]">
+                        <div class="size-4">
+                            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" fill="currentColor"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-[#0e161b] text-lg font-bold leading-tight tracking-[-0.015em]">HealthHub</h2>
+                    </div>
+                    <div class="hidden sm:flex items-center gap-4 sm:gap-9">
+                        <a class="text-[#0e161b] text-sm font-medium leading-normal" href="{% url 'search_medicament' %}">Accueil</a>
+                        <a class="text-[#0e161b] text-sm font-medium leading-normal" href="{% url 'list_prescriptions' %}">Ordonnances</a>
+                        <a class="text-[#0e161b] text-sm font-medium leading-normal" href="{% url 'doctor_appointments' %}">Rendez-vous</a>
+                    </div>
+                </div>
+
+                <form method="post" action="{% url 'logout' %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-[#0e161b] text-sm font-medium leading-normal hover:text-[#4e7a97]">Logout</button>
+                </form>
+            </header>
+            <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-6">Liste des Prescriptions</h1>
+        
+        <!-- Search Form -->
+        <form method="GET" class="mb-6">
+            <div class="flex gap-4">
+                <input 
+                    type="text" 
+                    name="q" 
+                    value="{{ query }}"
+                    placeholder="Rechercher par nom du patient ou médecin" 
+                    class="flex-1 p-2 border rounded-lg"
+                >
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg">
+                    Rechercher
+                </button>
+            </div>
+        </form>
+
+        <!-- Prescriptions List -->
+        <div class="bg-white rounded-lg shadow">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b">
+                        <th class="p-4 text-left">Patient</th>
+                        <th class="p-4 text-left">Âge</th>
+                        <th class="p-4 text-left">Médecin</th>
+                        <th class="p-4 text-left">Date</th>
+                        <th class="p-4 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prescription in prescriptions %}
+                    <tr class="border-b">
+                        <td class="p-4">
+                            <div class="font-medium">{{ prescription.patient_nom }}</div>
+                            <div class="text-sm text-gray-600">
+                                {% for med in prescription.prescriptionmedicament_set.all %}
+                                    <div class="mt-2">
+                                        {{ med.medicament.nom_de_marque }} -
+                                        {{ med.quantite }}
+                                        {% if med.frequence %}
+                                            ({{ med.frequence }}x/jour en {{ med.unite_frequence }})
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="p-4">{{ prescription.patient_age }} ans</td>
+                        <td class="p-4">
+                            <div class="font-medium">{{ prescription.docteur_nom }}</div>
+                            <div class="text-sm text-gray-600">
+                                {{ prescription.docteur_specialite }}
+                            </div>
+                        </td>
+                        <td class="p-4">{{ prescription.date_creation|date:"d/m/Y" }}</td>
+                        <td class="p-4">
+                            {% if prescription.pdf_file %}
+                            <a href="{{ prescription.pdf_file.url }}" target="_blank"
+                               class="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm">
+                                Voir PDF
+                            </a>
+                            {% else %}
+                            <span class="text-gray-500 text-sm">PDF non disponible</span>
+                            {% endif %}
+                            <form method="POST" action="{% url 'delete_prescription' prescription.id %}" class="inline ml-2">
+                                {% csrf_token %}
+                                <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-600">
+                                    Supprimer
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="p-4 text-center text-gray-500">
+                            Aucune prescription trouvée
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
